@@ -32,7 +32,6 @@ import webbrowser
 print('Vesão do python: ', sys.version)  # Versao do python em uso
 firefox = webbrowser.Mozilla("C:\\Program Files\\Mozilla Firefox\\firefox.exe")
 
-# mun_shp = gpd.read_file("./BR_Municipios_2022/BR_Municipios_2022.shp")
 mapa_brasil = folium.Map(location=[-22.7864889,-50.6786708],zoom_start=4)
 
 # ########################## # Rodar apenas na primeira vez. (Escolha entre resolucao maxima, media, ou minima) ##############################
@@ -46,10 +45,13 @@ mapa_brasil = folium.Map(location=[-22.7864889,-50.6786708],zoom_start=4)
 #   json.dump(data, f)
 # #############################################################################################################################################
 
-f = open('br_municipios_min.json')
+# https://servicodados.ibge.gov.br/api/docs/malhas?versao=3
+f1 = open('br_municipios_min.json')
+f2 = open('br_estados_min.json')
 # f = open('br_municipios.json')
 
-municipios_json = json.load(f)
+municipios_json = json.load(f1)
+estados_json = json.load(f2)
 # print("municipios_json: ", municipios_json)
 # folium.GeoJson(municipios_json).add_to(mapa_brasil)
 
@@ -76,7 +78,7 @@ for mun in municipios_json['features']:
   # Converter de string para número (usado no índice da tabela com dem, infr e num_em).
 #   print("mun: ", mun)
   codarea = mun['properties']['codarea']
-#   print("codarea: ", codarea)
+  # print("codarea: ", codarea)
   # Busca do código de área no índice da linha da Tabela.
   if codarea in index:
     #print(df.loc[codarea,'dem'])
@@ -329,6 +331,16 @@ supply_scale = [0,1,2,3,4,5]
 print("supply_scale: ", supply_scale)
 
 # https://python-visualization.github.io/folium/latest/advanced_guide/colormaps.html
+
+print("estados_json: ", estados_json['features'][0]['properties']['codarea'])
+
+def my_color_function(feature):
+    """Maps low values to green and high values to red."""    
+    if int(estados_json['features'][0]['properties']['codarea']) > 0:
+        return " #FFFFFF"
+    else:
+        return " #000000"
+    
 # colormap = cm.LinearColormap(colors=['blue','green','yellow','orange','red','purple'], index=dem_scale,vmin=0.0,vmax=max(dem_scale))
 # colormap = cm.LinearColormap(["red", "orange", "yellow", "green"], index=[0, 1000, 10000, 170947],vmin=0.0,vmax=max(dem_scale))
 # colormap = cm.LinearColormap(["green", "yellow", "red"], index=[0, 1000, 170947],vmin=0.0,vmax=max(dem_scale))
@@ -343,20 +355,16 @@ colorscale.caption = 'Supply'     #Caption for legend
 # print("colormap: ", colormap)
 # plt(colormap)
 
-# # colorscale
-# def style_function(feature):
-#     demand_series = demand_lat_lng.set_index('codigo_ibge')['dem']
-#     print("demand_series: ", demand_series)
-#     demand = demand_series.get(int(feature['dem']), None)
-#     # print("int(feature.keys): ", int(feature['id']))
-#     print("demand: ", demand)
-#     # demand = mun['properties']['dem']
-#     return {
-#         'fillOpacity': 0.5,
-#         'weight': 0,
-#         'caption': "Demand",
-#         'fillColor': '#black' if demand is None else colorscale(demand)
-#     }
+states = folium.FeatureGroup(name='States')
+states.add_child(folium.GeoJson(data=estados_json,
+                                # style_function = lambda feature:{
+                                style_function = lambda x:{
+                                # 'fillColor':my_color_function(feature),                                
+                                'color':'black', #border color for the color fills
+                                'weight': 2, #how thick the border has to be
+                                'opacity':1,
+                                'fillOpacity':0.2,
+                                'interactive':False}))
 
 fgp = folium.FeatureGroup(name='Demand')
 
@@ -382,7 +390,7 @@ fgp.add_child(folium.GeoJson(data=municipios_json,
 # https://medium.com/data-hackers/criando-mapas-interativos-e-choropleth-maps-com-folium-em-python-abffae63bbd6
 cp = folium.Choropleth(data=df,                       
                        geo_data=municipios_json,
-                       columns=['origin2','num_em'],                             
+                       columns=['origin2','num_em'],  # Coluna 1 "origin2" == coluna "feature.properties.codarea"
                        key_on="feature.properties.codarea",                      
                       #  fill_color='YlGnBu', 
                       #  fill_color='YlOrRd',
@@ -411,10 +419,7 @@ cp = folium.Choropleth(data=df,
                        nan_fill_color = "White"
                        )
 
-# mun_data_indexed = df.set_index('origin2')
-# for s in cp.geojson.data['features']:
-#   s['properties']['num_em'] = mun_data_indexed.loc[s['codarea'], 'num_em']
-
+# https://stackoverflow.com/questions/70471888/text-as-tooltip-popup-or-labels-in-folium-choropleth-geojson-polygons
 folium.GeoJsonTooltip(
   fields=['mun2','num_em'],        
   aliases=['Municipality: ','Supply'],
@@ -426,7 +431,7 @@ mapa_brasil.add_child(cp)
 # mapa_brasil.add_child(colorscale)
 mapa_brasil.add_child(colormap)
 mapa_brasil.add_child(fgp)
-# mapa_brasil.add_child(folium.LayerControl())
+mapa_brasil.add_child(states)
 
 def draw_nodes(df_nodes, color, fg):
   # Drawing origin nodes.
