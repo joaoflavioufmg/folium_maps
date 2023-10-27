@@ -19,8 +19,6 @@ import networkx as nx
 
 
 import pandas as pd
-# import geopandas as gpd
-# gpd.options.io_engine = "pyogrio"
 import folium
 from folium.features import DivIcon
 import math
