@@ -81,11 +81,13 @@ for mun in municipios_json['features']:
   if codarea in index:
     #print(df.loc[codarea,'dem'])
     mun['properties']['mun2'] = df.loc[codarea,'mun2']
+    mun['properties']['pop'] = float(df.loc[codarea,'pop'])
     mun['properties']['dem'] = float(df.loc[codarea,'dem'])
     mun['properties']['infr'] = float(df.loc[codarea,'infr'])
     mun['properties']['num_em'] = float(df.loc[codarea,'num_em'])
   else:
     mun['properties']['mun2'] = ""
+    mun['properties']['pop'] = 0.0
     mun['properties']['dem'] = 0.0
     mun['properties']['infr'] = 0.0
     mun['properties']['num_em'] = 0.0
@@ -111,6 +113,10 @@ for mun in municipios_json['features']:
 # print("type(df.code[0]): ", type(df.code[0]))
 # print("municipios_json: ", municipios_json)
 
+# # ========= Rodar apenas um vez para criar o arquivo ==============
+# with open("municipios.json", "w") as outfile:
+#     json.dump(municipios_json, outfile)
+# # =================================================================
 
 hubs_infr_temp = df.loc[df['infr'] == 1]
 hubs_infr = hubs_infr_temp.reset_index(drop=True)
